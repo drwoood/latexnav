@@ -27,13 +27,23 @@ The tool is equally useful for human navigation from the terminal — colour-cod
 
 ## Installation
 
-Copy `latexnav.py` into your project root. No dependencies to install.
-
+**Option A: pip** (recommended — gives you the `latexnav` command)
 ```bash
-# That's it. Run with:
+pip install latexnav
+latexnav --help
+latexnav *.tex
+```
+
+**Option B: single file** (no install needed)
+```bash
+# Copy latexnav.py into your project root, then:
 python3 latexnav.py --help
 python3 latexnav.py *.tex
 ```
+
+No dependencies beyond the Python standard library. Requires Python 3.8+.
+
+Examples below use `latexnav` (the pip-installed command). If using the single-file method, substitute `python3 latexnav.py`.
 
 **Using with an LLM agent?** See [LLM agent integration](#llm-agent-integration) for setup. The quickest path: tell the agent to read this README and set up its memory/instructions files as suggested in that section.
 
@@ -41,36 +51,36 @@ python3 latexnav.py *.tex
 
 ```bash
 # Structural overview of your manuscript
-python3 latexnav.py --only-sections --only-numbered-results main.tex
+latexnav --only-sections --only-numbered-results main.tex
 
 # View a theorem's statement (10 lines) or full body
-python3 latexnav.py --show thm:main_result chapter1.tex
-python3 latexnav.py --show-full thm:main_result chapter1.tex
+latexnav --show thm:main_result chapter1.tex
+latexnav --show-full thm:main_result chapter1.tex
 
 # View multiple statements at once
-python3 latexnav.py --show thm:main_result,lem:helper chapter1.tex
+latexnav --show thm:main_result,lem:helper chapter1.tex
 
 # View the proof of a theorem
-python3 latexnav.py --proof thm:main_result chapter1.tex
+latexnav --proof thm:main_result chapter1.tex
 
 # What's near a result? (±3 elements by default)
-python3 latexnav.py --neighbourhood thm:main_result chapter1.tex
+latexnav --neighbourhood thm:main_result chapter1.tex
 
 # Find a label (built-in regex filter, replaces | grep)
-python3 latexnav.py --compact --filter "thm:main" *.tex
+latexnav --compact --filter "thm:main" *.tex
 
 # Focus on a section (by label or title substring)
-python3 latexnav.py --scope sec:introduction chapter1.tex
-python3 latexnav.py --scope "spectral theory" chapter2.tex
+latexnav --scope sec:introduction chapter1.tex
+latexnav --scope "spectral theory" chapter2.tex
 
 # Who references this result?
-python3 latexnav.py --reverse-refs thm:main_result main.tex
+latexnav --reverse-refs thm:main_result main.tex
 
 # Full transitive dependency chain
-python3 latexnav.py --reverse-refs thm:main_result --transitive main.tex
+latexnav --reverse-refs thm:main_result --transitive main.tex
 
 # Cross-file dependency matrix
-python3 latexnav.py --deps-matrix main.tex
+latexnav --deps-matrix main.tex
 ```
 
 Use the main document file (the one with `\input` commands) for cross-file reference resolution. Individual chapter files cannot resolve labels from other files.
@@ -89,35 +99,35 @@ Use the main document file (the one with `\input` commands) for cross-file refer
 
 Reference extraction covers `\ref{}`, `\cref{}`, `\Cref{}`, and `\eqref{}`, including comma-separated labels in `\cref{a,b}`.
 
-Run `python3 latexnav.py --help` for the complete flag reference with examples.
+Run `latexnav --help` for the complete flag reference with examples.
 
 ## Common workflows
 
 **Before modifying a theorem:** check what depends on it, then view the statement.
 ```bash
-python3 latexnav.py --reverse-refs thm:main_result main.tex
-python3 latexnav.py --show thm:main_result chapter1.tex
+latexnav --reverse-refs thm:main_result main.tex
+latexnav --show thm:main_result chapter1.tex
 ```
 
 **Pre-submission cleanup:** find orphaned labels, unused definitions, and missing references.
 ```bash
-python3 latexnav.py --orphan-report main.tex
+latexnav --orphan-report main.tex
 ```
 
 **Review workflow:** see all results that need work (hides READY items).
 ```bash
-python3 latexnav.py --review *.tex
+latexnav --review *.tex
 # Equivalent to: --status --hide-ready --only-numbered-results --compact
 ```
 
 **Citation audit:** check where a specific reference is used.
 ```bash
-python3 latexnav.py --cite-usage AuthorYear main.tex
+latexnav --cite-usage AuthorYear main.tex
 ```
 
 **Export for scripting:** compact TSV output, one line per element.
 ```bash
-python3 latexnav.py --compact --refs-per-theorem main.tex > structure.tsv
+latexnav --compact --refs-per-theorem main.tex > structure.tsv
 ```
 
 ## Parsed environments
@@ -207,7 +217,7 @@ The summariser's compact output mode (`--compact`) produces tab-separated output
 For LLM agents, we recommend a **two-tier documentation approach** to manage context window cost:
 
 1. **Concise snippet** (~15 lines) in your always-loaded instructions file (e.g., `.claude/CLAUDE.md`, `AGENTS.md`). Covers: what the tool is, when to use it, 10-row command table, key caveats.
-2. **Detailed reference** in a separate file the agent reads on demand (e.g., `DOCUMENT_GUIDE.md`). Covers: full feature reference, all flags, edge cases, filtering model, paper workflow.
+2. **Detailed reference** in a separate file the agent reads on demand (e.g., `LATEXNAV_GUIDE.md`). Covers: full feature reference, all flags, edge cases, filtering model, paper workflow.
 
 This keeps the base context small while making the full reference accessible when needed.
 
@@ -243,30 +253,16 @@ use `--warnings` for all diagnostics or `-q` to suppress.
 
 ### Detailed reference (for on-demand context)
 
-For the full feature reference, create a separate file (e.g., `DOCUMENT_GUIDE.md`) that the agent reads when it needs detailed information about a specific feature. This should cover:
-
-- Complete flag reference with descriptions
-- The orthogonal filtering model (structural × content dimensions, `--only-*` / `--hide-*`)
-- Reference analysis options (`--refs-per-*`, `--refs-type`, `--different-level`)
-- Citation analysis (`--cites-per-*`, `--resolve-cites`)
-- Scope filtering details (exact label, fuzzy title matching, `(oos)` vs `(!)` annotations)
-- Status overlay (TSV format, `--status-filter`, `--hide-ready`)
-- Dependency analysis (`--reverse-refs`, `--transitive`, depth controls, type filters)
-- JSON export fields and proof-theorem linking
-- DOT graph export (chapter-level and theorem-level)
-- Compiled reference display (`--rendered-refs`, `.aux` file integration)
-- Paper extraction workflow (`--tags`, `--paper`, `--paper-check`)
-
-Instruct the agent to read this file when it needs details beyond the concise command table.
+The included [`LATEXNAV_GUIDE.md`](LATEXNAV_GUIDE.md) provides the full feature reference: complete flag descriptions, the filtering model, scope caveats, dependency analysis options, export formats, and 40+ example queries. Copy it into your project and instruct the agent to read it when it needs details beyond the concise command table.
 
 ### Target CLI tools
 
 | CLI tool | Always-loaded file | On-demand file |
 |----------|-------------------|----------------|
-| Claude Code | `.claude/CLAUDE.md` | `.claude/docs/DOCUMENT_GUIDE.md` |
-| Codex (GPT) | `AGENTS.md` | `DOCUMENT_GUIDE.md` |
-| OpenCode | `PROJECT_SETUP.md` | `DOCUMENT_GUIDE.md` |
-| Gemini CLI | `GEMINI.md` | `DOCUMENT_GUIDE.md` |
+| Claude Code | `CLAUDE.md` | `LATEXNAV_GUIDE.md` |
+| Codex (GPT) | `AGENTS.md` | `LATEXNAV_GUIDE.md` |
+| OpenCode | `PROJECT_SETUP.md` | `LATEXNAV_GUIDE.md` |
+| Gemini CLI | `GEMINI.md` | `LATEXNAV_GUIDE.md` |
 
 ## Licence
 
