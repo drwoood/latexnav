@@ -14,7 +14,7 @@ Uses an orthogonal two-dimensional filtering model:
   --only-* flags create whitelists; --hide-* flags subtract from them.
 
 Usage:
-    python latex_summariser.py file1.tex [file2.tex ...] [OPTIONS]
+    latexnav file1.tex [file2.tex ...] [OPTIONS]
 
 Options:
     -o, --output FILE              Output file (default: stdout)
@@ -84,31 +84,31 @@ Parsed Environment Types:
 
 Examples:
     # Basic usage
-    python latex_summariser.py chapter*.tex
+    latexnav chapter*.tex
 
     # Combined filtering: numbered results minus definitions
-    python latex_summariser.py --only-numbered-results --hide-definitions chapter*.tex
+    latexnav --only-numbered-results --hide-definitions chapter*.tex
 
     # Scope to a specific section with theorem dependencies
-    python latex_summariser.py --scope sec:results --only-theorems --refs-per-theorem chapter2.tex
+    latexnav --scope sec:results --only-theorems --refs-per-theorem chapter2.tex
 
     # Scope by title (fuzzy matching — no need to know the exact label)
-    python latex_summariser.py --scope "index theory" chapter1.tex
+    latexnav --scope "index theory" chapter1.tex
 
     # Citations with author/year resolution
-    python latex_summariser.py --cites-per-section --resolve-cites chapter1.tex
+    latexnav --cites-per-section --resolve-cites chapter1.tex
 
     # Elements in a line range
-    python latex_summariser.py --line-range 100:200 chapter3.tex
+    latexnav --line-range 100:200 chapter3.tex
 
     # With status overlay
-    python latex_summariser.py --status --hide-ready main.tex
+    latexnav --status --hide-ready main.tex
 
     # Transitive dependency chain
-    python latex_summariser.py --reverse-refs thm:main_result --transitive main.tex
+    latexnav --reverse-refs thm:main_result --transitive main.tex
 
     # Compact output with size annotations
-    python latex_summariser.py --compact --sizes chapter1.tex
+    latexnav --compact --sizes chapter1.tex
 """
 
 import re
@@ -3943,46 +3943,54 @@ def format_json_export(combined_structure, file_contents, label_registry, filter
 
 
 def main():
+    # Detect invocation: 'latexnav' (pip console script) vs 'python3 latexnav.py'
+    prog_name = os.path.basename(sys.argv[0])
+    if prog_name.endswith('.py'):
+        prog_cmd = f'python {prog_name}'
+    else:
+        prog_cmd = prog_name
+
     parser = argparse.ArgumentParser(
+        prog=prog_name,
         description='Summarize structure from LaTeX files with colors and cross-reference analysis',
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog='''Examples:
+        epilog=f'''Examples:
   # Structural overview
-  python latex_summariser.py *.tex
-  python latex_summariser.py --only-sections --only-numbered-results main.tex
+  {prog_cmd} *.tex
+  {prog_cmd} --only-sections --only-numbered-results main.tex
 
   # View theorem statements and proofs
-  python latex_summariser.py --show thm:foo chapter.tex
-  python latex_summariser.py --show thm:foo,lem:bar chapter.tex
-  python latex_summariser.py --show thm:foo --show-limit 20 chapter.tex
-  python latex_summariser.py --proof thm:foo chapter.tex
-  python latex_summariser.py --neighbourhood thm:foo chapter.tex
+  {prog_cmd} --show thm:foo chapter.tex
+  {prog_cmd} --show thm:foo,lem:bar chapter.tex
+  {prog_cmd} --show thm:foo --show-limit 20 chapter.tex
+  {prog_cmd} --proof thm:foo chapter.tex
+  {prog_cmd} --neighbourhood thm:foo chapter.tex
 
   # Find and filter
-  python latex_summariser.py --compact --filter "thm:foo" *.tex
-  python latex_summariser.py --scope sec:intro chapter.tex
-  python latex_summariser.py --scope "index theory" chapter.tex
+  {prog_cmd} --compact --filter "thm:foo" *.tex
+  {prog_cmd} --scope sec:intro chapter.tex
+  {prog_cmd} --scope "index theory" chapter.tex
 
   # Dependencies and references
-  python latex_summariser.py --reverse-refs thm:foo main.tex
-  python latex_summariser.py --reverse-refs thm:foo --transitive main.tex
-  python latex_summariser.py --deps-matrix main.tex
-  python latex_summariser.py --refs-per-theorem --refs-type theorem,lemma *.tex
+  {prog_cmd} --reverse-refs thm:foo main.tex
+  {prog_cmd} --reverse-refs thm:foo --transitive main.tex
+  {prog_cmd} --deps-matrix main.tex
+  {prog_cmd} --refs-per-theorem --refs-type theorem,lemma *.tex
 
   # Status and review workflow
-  python latex_summariser.py --review *.tex
-  python latex_summariser.py --status --hide-ready --only-numbered-results main.tex
+  {prog_cmd} --review *.tex
+  {prog_cmd} --status --hide-ready --only-numbered-results main.tex
 
   # Reports
-  python latex_summariser.py --orphan-report main.tex
-  python latex_summariser.py --drafting-report *.tex
-  python latex_summariser.py --cite-usage AuthorYear main.tex
-  python latex_summariser.py --parse-summary main.tex
+  {prog_cmd} --orphan-report main.tex
+  {prog_cmd} --drafting-report *.tex
+  {prog_cmd} --cite-usage AuthorYear main.tex
+  {prog_cmd} --parse-summary main.tex
 
   # Export
-  python latex_summariser.py --json main.tex
-  python latex_summariser.py --compact --sizes *.tex -o summary.tsv
-  python latex_summariser.py --dot-export deps.dot --dot-chapter-level main.tex
+  {prog_cmd} --json main.tex
+  {prog_cmd} --compact --sizes *.tex -o summary.tsv
+  {prog_cmd} --dot-export deps.dot --dot-chapter-level main.tex
 
 Parsed environment types:
   Standard:    theorem, definition, lemma, proposition, corollary
@@ -3995,8 +4003,8 @@ Parsed environment types:
   are parsed but hidden by default; use --show-non-numbered-results.
 
 Reference extraction:
-  Covers \\ref{}, \\cref{}, \\Cref{}, \\eqref{}, including comma-separated
-  labels in \\cref{a,b}.
+  Covers \\ref{{}}, \\cref{{}}, \\Cref{{}}, \\eqref{{}}, including comma-separated
+  labels in \\cref{{a,b}}.
 
 Warning levels (--warnings):
   errors (default)  Duplicate labels, missing files, parse failures
@@ -4007,10 +4015,10 @@ Argument ordering note:
   Flags that accept an optional value (--status [FILE]) may consume the next
   positional filename if placed before it. Place filenames first or use
   explicit flag values:
-    OK:    python latex_summariser.py Chapter*.tex --status
-    OK:    python latex_summariser.py --status myfile.tsv Chapter*.tex
-    BAD:   python latex_summariser.py --status Chapter*.tex
-           (--status consumes "Chapter*.tex" as its optional FILE argument)
+    OK:    {prog_cmd} *.tex --status
+    OK:    {prog_cmd} --status myfile.tsv *.tex
+    BAD:   {prog_cmd} --status *.tex
+           (--status consumes the next argument as its optional FILE value)
         '''
     )
     parser.add_argument('input_files', nargs='+', help='Input LaTeX files (one or more)')
